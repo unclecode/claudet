@@ -39,6 +39,12 @@ function insertMicrophoneButton() {
         containerDiv.style.cssText =
             "display: flex; flex-direction: column; align-items: flex-start; margin-right: 10px;";
 
+        // Remove microphone button if it already exists
+        const existingButton = document.getElementById("mic-button");
+        if (existingButton) {
+            existingButton.remove();
+        }
+        
         const micButton = document.createElement("button");
         micButton.innerHTML = recordIcon;
         micButton.id = "mic-button";
@@ -180,6 +186,7 @@ function handleTranscription(response) {
 
     if (response.success && response.text) {
         insertTranscribedText(response.text);
+        initializeExtension();
     } else {
         showError(response.error || "Transcription failed. Please try again.");
     }
@@ -256,11 +263,11 @@ document.head.appendChild(style);
 //     initializeExtension();
 // }
 
-// function initializeExtension() {
-//     insertMicrophoneButton();
-//     console.log("Microphone button inserted");
-//     // Add any other initialization code here
-// }
+function initializeExtension() {
+    insertMicrophoneButton();
+    console.log("Microphone button inserted");
+    // Add any other initialization code here
+}
 
 // Additional event listener for dynamically loaded content
 const observeDOM = () => {

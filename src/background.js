@@ -10,7 +10,7 @@ env.allowLocalModels = false;
 // Disable multithreading due to a bug in onnxruntime-web
 env.backends.onnx.wasm.numThreads = 1;
 
-let currentModel = "webgpu";
+let currentModel = "groq";
 let apiKey = "";
 let messages = [];
 
