@@ -35,15 +35,22 @@ const closeIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" x
 function insertMicrophoneButton() {
     const targetDiv = document.querySelector(".flex.min-h-4.flex-1.items-center");
     if (targetDiv) {
+        // remove claudet container if it already exists
+        const existingContainer = document.querySelector(".alaudet-mic-container");
+        if (existingContainer) {
+            existingContainer.remove();
+        }
+        // remove error message if it already exists
+        const existingError = document.getElementById("error-message");
+        if (existingError) {
+            existingError.remove();
+        }
         const containerDiv = document.createElement("div");
+        containerDiv.classList.add("alaudet-mic-container");
         containerDiv.style.cssText =
             "display: flex; flex-direction: column; align-items: flex-start; margin-right: 10px;";
 
-        // Remove microphone button if it already exists
-        const existingButton = document.getElementById("mic-button");
-        if (existingButton) {
-            existingButton.remove();
-        }
+
         
         const micButton = document.createElement("button");
         micButton.innerHTML = recordIcon;

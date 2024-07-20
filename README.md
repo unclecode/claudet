@@ -1,6 +1,6 @@
 # 🎙️ Claude AI Speech-to-Text Chrome Extension 🤖
 
-![Demo](https://raw.githubusercontent.com/unclecode/claudet/main/demo.gif)
+![Demo](https://raw.githubusercontent.com/unclecode/claudet/main/howto.gif)
 
 ## Why This Extension? 🤔
 Hey there!
