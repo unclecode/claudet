@@ -1,0 +1,95 @@
+:root {
+    --bg-color: #222220;
+    --text-color: #a4a49f;
+    --primary-color: #e27c5b;
+    --secondary-color: #3a3a38;
+    --hover-color: #4a4a48;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    margin: 0;
+    padding: 20px;
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+h1,
+h2 {
+    color: var(--text-color);
+}
+
+.section {
+    background-color: var(--secondary-color);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+input[type="text"],
+input[type="password"] {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    background-color: var(--bg-color);
+    border: 1px solid var(--text-color);
+    color: var(--text-color);
+    border-radius: 4px;
+}
+
+button {
+    background-color: var(--primary-color);
+    color: var(--bg-color);
+    border: none;
+    padding: 10px 20px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.3s ease;
+}
+
+button:hover {
+    background-color: var(--hover-color);
+}
+
+ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+li {
+    background-color: var(--hover-color);
+    padding: 10px;
+    margin-bottom: 5px;
+    border-radius: 4px;
+}
+
+li:nth-child(even) {
+    background-color: var(--secondary-color);
+}
+.footer {
+    margin-top: 20px;
+    text-align: center;
+    font-size: 0.9em;
+    color: var(--text-color);
+}
+
+.footer a {
+    color: var(--primary-color);
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.footer a:hover {
+    color: var(--hover-color);
+    text-decoration: underline;
+}

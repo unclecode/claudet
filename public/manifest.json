@@ -1,0 +1,43 @@
+{
+    "manifest_version": 3,
+    "name": "Claudet: Claude.ai Voice Input",
+    "description": "Add voice input capability to Claude.ai using Transformers.js and Groq API",
+    "version": "1.0.1",
+    "permissions": ["activeTab", "scripting", "storage"],
+    "host_permissions": ["https://api.groq.com/*"],
+    "background": {
+      "service_worker": "background.js",
+      "type": "module"
+    },
+    "content_scripts": [
+      {
+        "matches": ["https://claude.ai/*"],
+        "js": ["content.js"]
+      }
+    ],
+    "action": {
+      "default_popup": "popup.html",
+      "default_icon": {
+        "16": "icon16.png",
+        "48": "icon48.png",
+        "128": "icon128.png"
+      },
+      "default_title": "Claudet: Claude.ai Voice Input"
+    },
+    "options_page": "options.html",
+    "content_security_policy": {
+      "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+    },
+    "web_accessible_resources": [
+      {
+        "resources": ["icon16.png", "icon48.png", "icon128.png"],
+        "matches": ["https://claude.ai/*"]
+      }
+    ],
+    "icons": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    },
+    "minimum_chrome_version": "92"
+  }

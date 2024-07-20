@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>ClaudeTalk Settings</title>
+        <style>
+            body {
+                width: 300px;
+                padding: 15px;
+                font-family: Arial, sans-serif;
+                background-color: #2e2e2b;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                color: #d7d7d2;
+            }
+            h1 {
+                color: #e17c5b;
+                font-size: 20px;
+                margin-bottom: 15px;
+            }
+            .logo {
+                width: 64px;
+                height: 64px;
+                margin-bottom: 10px;
+            }
+            label {
+                display: flex;
+                margin-bottom: 5px;
+                width: fit-content;
+                color: #aeaaa0;
+            }
+            select,
+            input {
+                width: 100%;
+                padding: 5px;
+                margin-bottom: 10px;
+                background-color: transparent;
+                border-radius: 10px;
+                border-color: #494845;
+                color: #aeaaa0;
+                outline: none;
+                border: 1px solid #494845;
+            }
+            #apiKeyContainer {
+                display: none;
+            }
+            button {
+                background-color: #e17c5b;
+                color: white;
+                border: none;
+                padding: 10px;
+                cursor: pointer;
+                width: 100%;
+                border-radius: 2em;
+            }
+            button:hover {
+                background-color: #d16c4b;
+            }
+            #saveResponse {
+                margin-top: 10px;
+                color: #e17c5b;
+            }
+        </style>
+        <script defer src="background.js"></script>
+        <script defer src="popup.js"></script>
+        <script defer src="content.js"></script>
+    </head>
+    <body>
+        <img src="icon128.png" alt="ClaudeTalk Logo" class="logo" />
+        <h1>ClaudeTalk Settings</h1>
+        <label for="modelSelect">Select Model:</label>
+        <select id="modelSelect">
+            <option value="webgpu">WebGPU Whisper (Default)</option>
+            <option value="groq">Groq</option>
+        </select>
+        <div id="apiKeyContainer">
+            <label for="apiKey">Groq API Key:</label>
+            <input type="password" id="apiKey" placeholder="Enter your Groq API key" />
+        </div>
+        <button id="saveButton">Save Settings</button>
+        <div id = "saveResponse"></div>
+
+        <script src="popup.js"></script>
+    </body>
+</html>
