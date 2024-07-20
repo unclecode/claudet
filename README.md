@@ -1,7 +1,8 @@
 # 🎙️ Claude AI Speech-to-Text Chrome Extension 🤖
 
-## Why This Extension? 🤔
+![Demo](https://raw.githubusercontent.com/unclecode/claudet/main/demo.gif)
 
+## Why This Extension? 🤔
 Hey there!
 
 I don't know if you've felt this way, but I love using AI assistants like Claude. Recently, I found myself wishing I could talk to Claude instead of typing all the time. I enjoyed the speech-to-text feature when communicating with ChatGPT, and I wanted the same experience with Claude.
