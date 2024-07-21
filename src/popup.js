@@ -15,6 +15,21 @@ document.addEventListener('DOMContentLoaded', function() {
         toggleApiKeyVisibility();
     });
 
+    // Check if WebGPU model failed to load
+    chrome.storage.local.get(['modelLoadError'], function(result) {
+        if (result.modelLoadError) {
+            const webgpuOption = modelSelect.querySelector('option[value="webgpu"]');
+            if (webgpuOption) {
+                webgpuOption.disabled = true;
+                webgpuOption.text += " (unavailable)";
+            }
+            if (modelSelect.value === 'webgpu') {
+                modelSelect.value = 'groq';
+                toggleApiKeyVisibility();
+            }
+        }
+    });
+
     modelSelect.addEventListener('change', toggleApiKeyVisibility);
 
     saveButton.addEventListener('click', function() {
@@ -26,9 +41,7 @@ document.addEventListener('DOMContentLoaded', function() {
             apiKey: apiKey
         }, function() {
             console.log('Settings saved');
-            // Optionally, show a "Settings saved" message to the user
             document.getElementById('saveResponse').textContent = 'Settings saved.';
-            // close the popup
             setTimeout(() => window.close(), 1000);
         });
     });

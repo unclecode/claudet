@@ -13,10 +13,14 @@ env.backends.onnx.wasm.numThreads = 1;
 let currentModel = "groq";
 let apiKey = "";
 let messages = [];
+let modelLoadError = false;
 
-chrome.storage.local.get(["messages"], function (result) {
+chrome.storage.local.get(["messages", "modelLoadError"], function (result) {
     if (result.messages) {
         messages = result.messages;
+    }
+    if (result.modelLoadError !== undefined) {
+        modelLoadError = result.modelLoadError;
     }
 });
 
@@ -28,6 +32,7 @@ chrome.storage.sync.get(["model", "apiKey"], function (result) {
         apiKey = result.apiKey;
     }
 });
+
 
 chrome.storage.onChanged.addListener(function (changes, namespace) {
     for (let key in changes) {
@@ -58,7 +63,7 @@ class PipelineFactory {
                     revision: this.model.includes("/whisper-medium") ? "no_attentions" : "main",
                 });
             } catch (error) {
-                console.error("Error initializing pipeline:", error);
+                console.log("Error: Error initializing pipeline:", error);
                 throw error;
             } finally {
                 this.isLoading = false;
@@ -95,7 +100,7 @@ async function transcribeWithGroq(audioArray) {
             return { success: false, error: errorData.error.message };
         }
     } catch (error) {
-        console.error("Error transcribing audio:", error);
+        console.log("Error: Error transcribing audio:", error);
         return { success: false, error: "Unable to transcribe audio. Please try again." };
     }
 }
@@ -119,7 +124,7 @@ const transcribe = async (audio, language = "en") => {
 
         return { success: true, text: output.text };
     } catch (error) {
-        console.error("Transcription error:", error);
+        console.log("Error: Transcription error:", error);
         return { success: false, error: error.message || "Unknown transcription error" };
     }
 };
@@ -128,8 +133,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === "transcribe") {
         (async function () {
             try {
+                if (currentModel === "groq" && !apiKey) {
+                    sendResponse({ success: false, error: "Groq API key not set. Please set it in the extension options." });
+                    return;
+                }
+
                 let result;
                 if (currentModel === "webgpu") {
+                    if (modelLoadError) {
+                        sendResponse({ success: false, error: "WebGPU model failed to load. Please try again or switch to Groq." });
+                        return;
+                    }
                     result = await transcribe(message.audio, message.language);
                 } else if (currentModel === "groq") {
                     result = await transcribeWithGroq(message.audioBuffer);
@@ -164,5 +178,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 PipelineFactory.getInstance((data) => {
     console.log("Preloading model, progress:", data);
 }).catch((error) => {
-    console.error("Failed to preload model:", error);
+    console.log("Failed to preload model:", error);
+    chrome.storage.local.set({ modelLoadError: true });
 });
