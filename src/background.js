@@ -214,7 +214,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                         // Save to local storage
                         chrome.storage.local.set({ messages: messages });
                     }
-                    
+                    result.micId = message.micId || "mic-button";
                     sendResponse(result);
                 });
                 

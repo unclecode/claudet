@@ -3,6 +3,7 @@ let isTranscribing = false;
 let audioContext;
 let mediaRecorder;
 let audioChunks = [];
+let clickedMicId = "";
 
 const WHISPER_SAMPLING_RATE = 16000;
 
@@ -32,35 +33,41 @@ const closeIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" x
   <path d="M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>`;
 
-function insertMicrophoneButton() {
-    const targetDiv = document.querySelector(".flex.min-h-4.flex-1.items-center");
+function insertMicrophoneButton(targetDiv, inline) {
+    const count = document.querySelectorAll(".claudet-mic-button-inline").length;
+    const inlineClassSuffix = `-inline-${count}`;
+    // const targetDiv = document.querySelector(".flex.min-h-4.flex-1.items-center");
     if (targetDiv) {
         // remove claudet container if it already exists
-        const existingContainer = document.querySelector(".alaudet-mic-container");
+        const existingContainer = document.querySelector(".claudet-mic-container" + (inline ? inlineClassSuffix : ""));
         if (existingContainer) {
             existingContainer.remove();
         }
         // remove error message if it already exists
-        const existingError = document.getElementById("error-message");
+        const existingError = document.getElementById("error-message" + (inline ? inlineClassSuffix : ""));
         if (existingError) {
             existingError.remove();
         }
         const containerDiv = document.createElement("div");
-        containerDiv.classList.add("alaudet-mic-container");
+        containerDiv.classList.add("claudet-mic-container" + (inline ? inlineClassSuffix : ""));
         containerDiv.style.cssText =
             "display: flex; flex-direction: column; align-items: flex-start; margin-right: 10px;";
 
-
-        
         const micButton = document.createElement("button");
         micButton.innerHTML = recordIcon;
+        micButton.classList.add("claudet-mic-button");
         micButton.id = "mic-button";
+        if (inline) {
+            micButton.classList.add("claudet-mic-button-inline");
+            // count hpow many ".claudet-mic-button-inline" are there            
+            micButton.id += inlineClassSuffix;
+        }
         micButton.style.cssText = "background: none; border: none; cursor: pointer;";
         micButton.onclick = toggleRecording;
 
         const infoSpeechDiv = document.createElement("div");
         infoSpeechDiv.classList.add("flex");
-        infoSpeechDiv.id = "error-message";
+        infoSpeechDiv.id = "error-message" + (inline ? inlineClassSuffix : "");
         infoSpeechDiv.style.cssText =
             "color: #e27c5b; font-size: 12px; margin-top: 5px; align-items: center; background-color: #2b2b267a; border: 1px solid #e27c5b; border-radius: 5px; padding: 0.25em 0.5em; display: none;";
 
@@ -102,9 +109,10 @@ function closeError() {
     }
 }
 
-function toggleRecording() {
+function toggleRecording(obj) {
+    clickedMicId = obj.currentTarget //.id;
     closeError(); // Close any existing error message
-    const micButton = document.getElementById("mic-button");
+    const micButton = clickedMicId // document.getElementById(clickedMicId);
     if (!isRecording && !isTranscribing) {
         startRecording();
         micButton.innerHTML = stopIcon;
@@ -116,6 +124,13 @@ function toggleRecording() {
         micButton.disabled = true;
         isTranscribing = true;
     }
+
+    // cancel the event
+    obj.preventDefault();
+    // avoid the event to propagate
+    obj.stopPropagation();
+
+    return false;
 }
 
 let mediaRecorderRef = { current: null };
@@ -137,7 +152,7 @@ function startRecording() {
             mediaRecorder.start();
             isRecording = true;
 
-            const micButton = document.getElementById("mic-button");
+            const micButton = clickedMicId //document.getElementById(clickedMicId);
             micButton.innerHTML = stopIcon;
             micButton.style.animation = "spin 2s linear infinite";
         })
@@ -155,7 +170,7 @@ function stopRecording() {
         isRecording = false;
         isTranscribing = true;
 
-        const micButton = document.getElementById("mic-button");
+        const micButton = clickedMicId //document.getElementById(clickedMicId);
         micButton.innerHTML = waitIcon;
         micButton.style.animation = "";
         micButton.disabled = true;
@@ -173,6 +188,7 @@ function transcribeAudio() {
                 {
                     action: "transcribe",
                     audioBuffer: Array.from(new Uint8Array(buffer)), // Convert ArrayBuffer to array
+                    micId: clickedMicId.id,
                 },
                 handleTranscription
             );
@@ -185,38 +201,71 @@ function transcribeAudio() {
 }
 
 function handleTranscription(response) {
-    const micButton = document.getElementById("mic-button");
+    const micId = response.micId;
+    
+    const micButton = document.getElementById(micId);
     isTranscribing = false;
     micButton.disabled = false;
     micButton.style.animation = "";
     micButton.innerHTML = recordIcon;
 
     if (response.success && response.text) {
-        insertTranscribedText(response.text);
+        insertTranscribedText(response.text, micId);
         initializeExtension();
     } else {
         showError(response.error || "Transcription failed. Please try again.");
     }
 }
 
-function insertTranscribedText(text) {
-    const inputDiv = document.querySelector('[contenteditable="true"]');
-    if (inputDiv) {
-        inputDiv.focus();
-        document.execCommand("insertText", false, text);
+function insertTranscribedText(text, micId) {
+    let inputDiv;
+    const isInline = micId.includes("inline");
+    if (isInline) {
+        // Extract the container class suffix from the micId
+        const containerClassSuffix = micId.split("-").slice(-1)[0];
+        // Select .claudet-mic-container-inline then take the two above prent then search for text area that is in the same div
+        const inlineTarget = document
+            .querySelector(".claudet-mic-container-inline-" + containerClassSuffix)
+            .parentElement.parentElement.querySelector("textarea");
+        if (inlineTarget) {
+            inputDiv = inlineTarget;
+            inputDiv.focus();
+            inputDiv.value += text;
+        } else {
+            console.error("Textarea not found");
+            showError("Error inserting transcribed text. Please try again.");
+            return;
+        }
     } else {
-        console.error("Contenteditable div not found");
-        showError("Error inserting transcribed text. Please try again.");
+        inputDiv = document.querySelector('[contenteditable="true"]');
+        if (inputDiv) {
+            inputDiv.focus();
+            document.execCommand("insertText", false, text);
+        } else {
+            console.error("Contenteditable div not found");
+            showError("Error inserting transcribed text. Please try again.");
+        }
     }
 }
 
 function resetRecordingState() {
-    const micButton = document.getElementById("mic-button");
+    const allMics = document.querySelectorAll(".claudet-mic-button");
+    for (const mic of allMics) {
+        mic.disabled = false;
+        mic.style.animation = "";
+        mic.innerHTML = recordIcon;
+    }
     isRecording = false;
     isTranscribing = false;
     micButton.disabled = false;
-    micButton.style.animation = "";
-    micButton.innerHTML = recordIcon;
+    // micButton.style.animation = "";
+    // micButton.innerHTML = recordIcon;
+    // const inlineMicButton = document.getElementById("mic-button-inline");
+    // if (inlineMicButton) {
+    //     inlineMicButton.disabled = false;
+    //     inlineMicButton.style.animation = "";
+    //     inlineMicButton.innerHTML = recordIcon;
+    // }
 }
 
 function sendMessageToBackground(message) {
@@ -263,29 +312,48 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-
 // if (document.readyState === "loading") {
 //     document.addEventListener("DOMContentLoaded", initializeExtension);
 // } else {
 //     initializeExtension();
 // }
 
-function initializeExtension() {
-    insertMicrophoneButton();
-    console.log("Microphone button inserted");
-    // Add any other initialization code here
-}
+// function initializeExtension() {
+//     insertMicrophoneButton();
+//     console.log("Microphone button inserted");
+//     // Add any other initialization code here
+// }
 
 // Every 100 ms check if mic button is present if not insert it
 setInterval(() => {
     const micButton = document.getElementById("mic-button");
     if (!micButton) {
-        insertMicrophoneButton();
+        const targetDiv = document.querySelector(".flex.min-h-4.flex-1.items-center");
+        if (targetDiv && !targetDiv.previousSibling && !targetDiv.previousSibling?.matches("button")) {
+            insertMicrophoneButton(targetDiv);
+        }
     }
-}, 100);
+    // Check for all inlines
+    const inlineTargets = document.querySelectorAll(".text-text-300.flex.flex-row.items-center.gap-2.text-xs");
+    for (const inlineTarget of inlineTargets) {
+        // check if inlineTarget has a button with class claudet-mic-button-inline
+        const inlineMicButton = inlineTarget.parentNode.querySelector(".claudet-mic-button-inline");
+        if (!inlineMicButton) {
+            insertMicrophoneButton(inlineTarget, true);
+        }
+    }
+    // if (inlineTarget) {
+    //     const inlineMicButton = document.getElementById("mic-button-inline");
+    //     if (!inlineMicButton) {
+    //         // const inlineTarget = document.querySelector(".flex.items-center.justify-between.gap-2");
+    //         insertMicrophoneButton(inlineTarget, true);
+    //     }
+    // }
+}, 200);
 
 // Additional event listener for dynamically loaded content
 const observeDOM = () => {
+    console.log("Observing DOM for changes");
     const targetNode = document.body;
     const config = { childList: true, subtree: true };
 
@@ -299,6 +367,14 @@ const observeDOM = () => {
                     observer.disconnect(); // Stop observing once button is inserted
                     break;
                 }
+                const inlineTarget = document.querySelector(".flex.items-center.justify-between.gap-2");
+                // if (inlineTarget && !inlineTarget.previousSibling && !inlineTarget.previousSibling?.matches("button")) {
+                if (inlineTarget) {
+                    // insertMicrophoneButton();
+                    console.log("Microphone button for inline mode");
+                    observer.disconnect(); // Stop observing once button is inserted
+                    break;
+                }
             }
         }
     };
@@ -308,4 +384,4 @@ const observeDOM = () => {
 };
 
 // Start observing the DOM for changes
-setTimeout(observeDOM, 200);
+// setTimeout(observeDOM, 5000);
