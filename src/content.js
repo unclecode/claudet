@@ -68,7 +68,7 @@ function insertMicrophoneButton() {
         targetDiv.parentNode.insertBefore(containerDiv, targetDiv);
         targetDiv.parentElement.parentElement.appendChild(infoSpeechDiv);
     } else {
-        console.error("Target div for microphone button not found");
+        console.log("Target div for microphone button not found");
     }
 }
 
@@ -275,6 +275,14 @@ function initializeExtension() {
     console.log("Microphone button inserted");
     // Add any other initialization code here
 }
+
+// Every 100 ms check if mic button is present if not insert it
+setInterval(() => {
+    const micButton = document.getElementById("mic-button");
+    if (!micButton) {
+        insertMicrophoneButton();
+    }
+}, 100);
 
 // Additional event listener for dynamically loaded content
 const observeDOM = () => {

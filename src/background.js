@@ -11,7 +11,8 @@ env.allowLocalModels = false;
 env.backends.onnx.wasm.numThreads = 1;
 
 let currentModel = "groq";
-let apiKey = "";
+let groqApiKey = "";
+let openaiApiKey = "";
 let messages = [];
 
 chrome.storage.local.get(["messages"], function (result) {
@@ -20,21 +21,28 @@ chrome.storage.local.get(["messages"], function (result) {
     }
 });
 
-chrome.storage.sync.get(["model", "apiKey"], function (result) {
+// Add OpenAI to the storage retrieval
+chrome.storage.sync.get(["model", "groqApiKey", "openaiApiKey"], function (result) {
     if (result.model) {
         currentModel = result.model;
     }
-    if (result.apiKey) {
-        apiKey = result.apiKey;
+    if (result.groqApiKey) {
+        groqApiKey = result.groqApiKey;
+    }
+    if (result.openaiApiKey) {
+        openaiApiKey = result.openaiApiKey;
     }
 });
 
+// Update the storage change listener
 chrome.storage.onChanged.addListener(function (changes, namespace) {
     for (let key in changes) {
         if (key === "model") {
             currentModel = changes[key].newValue;
-        } else if (key === "apiKey") {
-            apiKey = changes[key].newValue;
+        } else if (key === "groqApiKey") {
+            groqApiKey = changes[key].newValue;
+        } else if (key === "openaiApiKey") {
+            openaiApiKey = changes[key].newValue;
         } else if (key === "messages" && namespace === "local") {
             messages = changes[key].newValue;
         }
@@ -68,7 +76,7 @@ class PipelineFactory {
     }
 }
 
-async function transcribeWithGroq(audioArray) {
+async function transcribeWithAPI(audioArray) {
     try {
         // Reconstruct ArrayBuffer from the array
         const audioBuffer = new Uint8Array(audioArray).buffer;
@@ -76,11 +84,15 @@ async function transcribeWithGroq(audioArray) {
 
         const formData = new FormData();
         formData.append("file", audioBlob, "recording.webm");
-        formData.append("model", "whisper-large-v3");
+        const modelName = currentModel === "groq" ? "whisper-large-v3" : "whisper-1";
+        formData.append("model", modelName);
         formData.append("response_format", "text");
 
-        const transcriptionResponse = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
-            method: "POST",
+        const urlBase = currentModel === "groq" ? "https://api.groq.com/openai" : "https://api.openai.com";
+        const apiKey = currentModel === "groq" ? groqApiKey : openaiApiKey;
+
+        const transcriptionResponse = await fetch(`${urlBase}/v1/audio/transcriptions`, {
+        method: "POST",
             headers: {
                 Authorization: `Bearer ${apiKey}`,
             },
@@ -129,29 +141,38 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         (async function () {
             try {
                 let result;
-                if (currentModel === "webgpu") {
-                    result = await transcribe(message.audio, message.language);
-                } else if (currentModel === "groq") {
-                    result = await transcribeWithGroq(message.audioBuffer);
-                }
-                
-                if (result.success) {
-                    // Store the message
-                    messages.push({
-                        text: result.text,
-                        timestamp: new Date().toISOString()
-                    });
-                    
-                    // Keep only the last 50 messages
-                    if (messages.length > 50) {
-                        messages = messages.slice(-50);
+
+                // refresh currentModel
+                chrome.storage.sync.get(["model"], async function (result) {
+                    if (result.model) {
+                        currentModel = result.model;
+                    }
+
+                    if (currentModel === "webgpu") {
+                        result = await transcribe(message.audio, message.language);
+                    } else if (currentModel === "groq" || currentModel === "openai") {
+                        result = await transcribeWithAPI(message.audioBuffer);
                     }
                     
-                    // Save to local storage
-                    chrome.storage.local.set({ messages: messages });
-                }
+                    if (result.success) {
+                        // Store the message
+                        messages.push({
+                            text: result.text,
+                            timestamp: new Date().toISOString()
+                        });
+                        
+                        // Keep only the last 50 messages
+                        if (messages.length > 50) {
+                            messages = messages.slice(-50);
+                        }
+                        
+                        // Save to local storage
+                        chrome.storage.local.set({ messages: messages });
+                    }
+                    
+                    sendResponse(result);
+                });
                 
-                sendResponse(result);
             } catch (error) {
                 sendResponse({ success: false, error: error.message || "Unknown error" });
             }

@@ -43,8 +43,9 @@
                 outline: none;
                 border: 1px solid #494845;
             }
-            #apiKeyContainer {
+            .api-key-container {
                 display: none;
+                width: 100%;
             }
             button {
                 background-color: #e17c5b;
@@ -63,9 +64,6 @@
                 color: #e17c5b;
             }
         </style>
-        <script defer src="background.js"></script>
-        <script defer src="popup.js"></script>
-        <script defer src="content.js"></script>
     </head>
     <body>
         <img src="icon128.png" alt="ClaudeTalk Logo" class="logo" />
@@ -74,13 +72,18 @@
         <select id="modelSelect">
             <option value="webgpu">WebGPU Whisper (Default)</option>
             <option value="groq">Groq</option>
+            <option value="openai">OpenAI</option>
         </select>
-        <div id="apiKeyContainer">
-            <label for="apiKey">Groq API Key:</label>
-            <input type="password" id="apiKey" placeholder="Enter your Groq API key" />
+        <div id="groqApiKeyContainer" class="api-key-container">
+            <label for="groqApiKey">Groq API Key:</label>
+            <input type="password" id="groqApiKey" placeholder="Enter your Groq API key" />
+        </div>
+        <div id="openaiApiKeyContainer" class="api-key-container">
+            <label for="openaiApiKey">OpenAI API Key:</label>
+            <input type="password" id="openaiApiKey" placeholder="Enter your OpenAI API key" />
         </div>
         <button id="saveButton">Save Settings</button>
-        <div id = "saveResponse"></div>
+        <div id="saveResponse"></div>
 
         <script src="popup.js"></script>
     </body>

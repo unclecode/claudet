@@ -1,16 +1,21 @@
 document.addEventListener('DOMContentLoaded', function() {
     const modelSelect = document.getElementById('modelSelect');
-    const apiKeyContainer = document.getElementById('apiKeyContainer');
-    const apiKeyInput = document.getElementById('apiKey');
+    const groqApiKeyContainer = document.getElementById('groqApiKeyContainer');
+    const openaiApiKeyContainer = document.getElementById('openaiApiKeyContainer');
+    const groqApiKeyInput = document.getElementById('groqApiKey');
+    const openaiApiKeyInput = document.getElementById('openaiApiKey');
     const saveButton = document.getElementById('saveButton');
 
     // Load saved settings
-    chrome.storage.sync.get(['model', 'apiKey'], function(result) {
+    chrome.storage.sync.get(['model', 'groqApiKey', 'openaiApiKey'], function(result) {
         if (result.model) {
             modelSelect.value = result.model;
         }
-        if (result.apiKey) {
-            apiKeyInput.value = result.apiKey;
+        if (result.groqApiKey) {
+            groqApiKeyInput.value = result.groqApiKey;
+        }
+        if (result.openaiApiKey) {
+            openaiApiKeyInput.value = result.openaiApiKey;
         }
         toggleApiKeyVisibility();
     });
@@ -19,21 +24,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
     saveButton.addEventListener('click', function() {
         const model = modelSelect.value;
-        const apiKey = apiKeyInput.value;
+        const groqApiKey = groqApiKeyInput.value;
+        const openaiApiKey = openaiApiKeyInput.value;
 
         chrome.storage.sync.set({
             model: model,
-            apiKey: apiKey
+            groqApiKey: groqApiKey,
+            openaiApiKey: openaiApiKey
         }, function() {
             console.log('Settings saved');
-            // Optionally, show a "Settings saved" message to the user
             document.getElementById('saveResponse').textContent = 'Settings saved.';
-            // close the popup
             setTimeout(() => window.close(), 1000);
         });
     });
 
     function toggleApiKeyVisibility() {
-        apiKeyContainer.style.display = modelSelect.value === 'groq' ? 'block' : 'none';
+        groqApiKeyContainer.style.display = modelSelect.value === 'groq' ? 'block' : 'none';
+        openaiApiKeyContainer.style.display = modelSelect.value === 'openai' ? 'block' : 'none';
     }
 });

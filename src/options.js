@@ -1,20 +1,47 @@
 document.addEventListener('DOMContentLoaded', function() {
-    const apiKeyInput = document.getElementById('apiKey');
-    const saveApiKeyButton = document.getElementById('saveApiKey');
+    const modelSelect = document.getElementById('modelSelect');
+    const groqApiKeyInput = document.getElementById('groqApiKey');
+    const openaiApiKeyInput = document.getElementById('openaiApiKey');
+    const saveSettingsButton = document.getElementById('saveSettings');
     const messageList = document.getElementById('messageList');
+    const groqApiKeyContainer = document.getElementById('groqApiKeyContainer');
+    const openaiApiKeyContainer = document.getElementById('openaiApiKeyContainer');
 
-    // Load and display API key
-    chrome.storage.sync.get(['apiKey'], function(result) {
-        if (result.apiKey) {
-            apiKeyInput.value = result.apiKey;
+    // Load and display settings
+    chrome.storage.sync.get(['model', 'groqApiKey', 'openaiApiKey'], function(result) {
+        if (result.model) {
+            modelSelect.value = result.model;
         }
+        if (result.groqApiKey) {
+            groqApiKeyInput.value = result.groqApiKey;
+        }
+        if (result.openaiApiKey) {
+            openaiApiKeyInput.value = result.openaiApiKey;
+        }
+        toggleApiKeyVisibility();
     });
 
-    // Save API key
-    saveApiKeyButton.addEventListener('click', function() {
-        const newApiKey = apiKeyInput.value;
-        chrome.storage.sync.set({apiKey: newApiKey}, function() {
-            alert('API key saved successfully!');
+    // Toggle API key input visibility based on selected model
+    function toggleApiKeyVisibility() {
+        const selectedModel = modelSelect.value;
+        groqApiKeyContainer.style.display = selectedModel === 'groq' ? 'block' : 'none';
+        openaiApiKeyContainer.style.display = selectedModel === 'openai' ? 'block' : 'none';
+    }
+
+    modelSelect.addEventListener('change', toggleApiKeyVisibility);
+
+    // Save settings
+    saveSettingsButton.addEventListener('click', function() {
+        const model = modelSelect.value;
+        const groqApiKey = groqApiKeyInput.value;
+        const openaiApiKey = openaiApiKeyInput.value;
+
+        chrome.storage.sync.set({
+            model: model,
+            groqApiKey: groqApiKey,
+            openaiApiKey: openaiApiKey
+        }, function() {
+            alert('Settings saved successfully!');
         });
     });
 
