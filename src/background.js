@@ -3,6 +3,7 @@
 // env.localModelPath = "models/";
 // background.js
 import { pipeline, env } from "@xenova/transformers";
+import { WaveFile } from 'wavefile';
 
 // Skip initial check for local models
 env.allowLocalModels = false;
@@ -51,6 +52,8 @@ chrome.storage.onChanged.addListener(function (changes, namespace) {
 
 class PipelineFactory {
     static task = "automatic-speech-recognition";
+    static model = "Xenova/whisper-base";
+    static model = 'Xenova/whisper-tiny.en';
     static model = "Xenova/whisper-tiny";
     static quantized = false;
     static instance = null;
@@ -112,14 +115,17 @@ async function transcribeWithAPI(audioArray) {
     }
 }
 
-const transcribe = async (audio, language = "en") => {
-    try {
-        let transcriber = await PipelineFactory.getInstance((data) => {
-            console.log("Model loading progress:", data);
-            // You could send this progress data to the content script if you want to show a loading indicator
-        });
 
-        let output = await transcriber(new Float32Array(audio), {
+const transcribe = async (audioArrayBuffer, language = "en") => {
+    try {
+        // let transcriber = await pipeline('automatic-speech-recognition', 'Xenova/whisper-tiny.en');
+        let transcriber = await PipelineFactory.getInstance();
+        const uint8Array = new Uint8Array(audioArrayBuffer);
+        const recoveredBuffer = uint8Array.buffer;
+        // Convert audio to required format
+        let audioData = await convertAudioToRequiredFormat(recoveredBuffer);
+
+        let output = await transcriber(audioData, {
             top_k: 0,
             do_sample: false,
             chunk_length_s: 15,
@@ -136,6 +142,45 @@ const transcribe = async (audio, language = "en") => {
     }
 };
 
+const convertAudioToRequiredFormat = async (audioArray) => {
+    try {
+
+        const wav = new WaveFile();
+        
+        // Assuming the input is 16-bit PCM audio at 44.1kHz
+        wav.fromScratch(1, 16000, '16', audioArray);
+        
+        // Get WAV file as a Buffer
+        const wavBuffer = wav.toBuffer();
+
+        const audioBlob = new Blob([wavBuffer], { type: "audio/wav" });
+
+        // Convert to 32-bit float
+        wav.toBitDepth('32f');
+        
+        // Convert to 16kHz sample rate
+        wav.toSampleRate(16000);
+        
+        let samples = wav.getSamples();
+        
+        if (Array.isArray(samples)) {
+            if (samples.length > 1) {
+                // Merge channels
+                const SCALING_FACTOR = Math.sqrt(2);
+                for (let i = 0; i < samples[0].length; ++i) {
+                    samples[0][i] = SCALING_FACTOR * (samples[0][i] + samples[1][i]) / 2;
+                }
+            }
+            samples = samples[0];
+        }
+        
+        return samples;
+    } catch (error) {
+        console.error("Error converting audio:", error);
+        throw new Error("Failed to process audio file. Unsupported format or corrupted file.");
+    }
+};
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === "transcribe") {
         (async function () {
@@ -149,7 +194,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     }
 
                     if (currentModel === "webgpu") {
-                        result = await transcribe(message.audio, message.language);
+                        result = await transcribe(message.audioBuffer, message.language);
                     } else if (currentModel === "groq" || currentModel === "openai") {
                         result = await transcribeWithAPI(message.audioBuffer);
                     }

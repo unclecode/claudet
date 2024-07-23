@@ -16,6 +16,7 @@
         "webpack-cli": "^5.1.4"
     },
     "dependencies": {
-        "@xenova/transformers": "^2.0.0"
+        "@xenova/transformers": "^2.0.0",
+        "wavefile": "^11.0.0"
     }
 }
