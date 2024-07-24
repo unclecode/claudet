@@ -2,8 +2,8 @@
     "manifest_version": 3,
     "name": "Claudet: Claude.ai Voice Input",
     "description": "Add voice input capability to Claude.ai using Transformers.js and Groq API",
-    "version": "1.0.1",
-    "permissions": ["activeTab", "scripting", "storage"],
+    "version": "0.1.0",
+    "permissions": [ "storage"],
     "host_permissions": ["https://api.groq.com/*"],
     "background": {
       "service_worker": "background.js",
