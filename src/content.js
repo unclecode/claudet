@@ -3,8 +3,8 @@ let isTranscribing = false;
 let audioContext;
 let mediaRecorder;
 let audioChunks = [];
-let clickedMicId = "";
-
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 100; // 1 second
 const WHISPER_SAMPLING_RATE = 16000;
 
 const bgColor = "#222220";
@@ -63,7 +63,7 @@ function insertMicrophoneButton(targetDiv, inline) {
             micButton.id += inlineClassSuffix;
         }
         micButton.style.cssText = "background: none; border: none; cursor: pointer;";
-        micButton.onclick = toggleRecording;
+        micButton.onclick = checkSettingsAndToggleRecording;;
 
         const infoSpeechDiv = document.createElement("div");
         infoSpeechDiv.classList.add("flex");
@@ -77,6 +77,27 @@ function insertMicrophoneButton(targetDiv, inline) {
     } else {
         console.log("Target div for microphone button not found");
     }
+}
+
+function checkSettingsAndToggleRecording() {
+    chrome.storage.sync.get(['model', 'apiKey'], function(result) {
+        if (result.model === 'groq' && !result.apiKey) {
+            showError("Groq API key not set. Please set it in the extension options.");
+            return;
+        }
+
+        if (result.model === 'webgpu') {
+            chrome.storage.local.get(['modelLoadError'], function(localResult) {
+                if (localResult.modelLoadError) {
+                    showError("WebGPU model failed to load. Please try again or switch to Groq in the extension options.");
+                } else {
+                    toggleRecording();
+                }
+            });
+        } else {
+            toggleRecording();
+        }
+    });
 }
 
 function showError(message) {
@@ -93,6 +114,13 @@ function showError(message) {
         closeButton.style.cssText = "background: none; border: none; cursor: pointer; margin-left: 5px;";
         closeButton.onclick = closeError;
 
+        // Disable the mic button
+        const micButton = document.getElementById("mic-button");
+        if (micButton) {
+            micButton.disabled = true;
+            micButton.style.opacity = "0.5";
+        }
+
         infoSpeechDiv.appendChild(div);
         infoSpeechDiv.appendChild(closeButton);
 
@@ -106,6 +134,12 @@ function closeError() {
     if (infoSpeechDiv) {
         infoSpeechDiv.style.display = "none";
         infoSpeechDiv.textContent = "";
+    }
+    // Re-enable the mic button
+    const micButton = document.getElementById("mic-button");
+    if (micButton) {
+        micButton.disabled = false;
+        micButton.style.opacity = "1";
     }
 }
 
@@ -177,27 +211,68 @@ function stopRecording() {
     }
 }
 
-function transcribeAudio() {
-    const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
 
-    audioBlob
-        .arrayBuffer()
-        .then((buffer) => {
-            // Send the audio buffer to the background script for transcription
-            chrome.runtime.sendMessage(
-                {
-                    action: "transcribe",
-                    audioBuffer: Array.from(new Uint8Array(buffer)), // Convert ArrayBuffer to array
-                    micId: clickedMicId.id,
-                },
-                handleTranscription
-            );
-        })
-        .catch((error) => {
-            console.error("Error converting blob to array buffer:", error);
-            showError("Error processing audio. Please try again.");
-            resetRecordingState();
-        });
+
+async function transcribeAudio(retryCount = 0) {
+    if (retryCount >= MAX_RETRIES) {
+        showError("Maximum retry attempts reached. Please try again later.");
+        resetRecordingState();
+        return;
+    }
+
+    if (!audioChunksRef.current || audioChunksRef.current.length === 0) {
+        console.error("No audio data available");
+        showError("No audio data recorded. Please try again.");
+        resetRecordingState();
+        return;
+    }
+
+    try {
+        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+
+        if (audioBlob.size === 0) {
+            throw new Error("Audio blob is empty");
+        }
+
+        const buffer = await audioBlob.arrayBuffer();
+
+        if (buffer.byteLength === 0) {
+            throw new Error("Array buffer is empty");
+        }
+
+        const uint8Array = new Uint8Array(buffer);
+        
+        if (uint8Array.length === 0) {
+            throw new Error("Uint8Array is empty");
+        }
+
+        chrome.runtime.sendMessage(
+            {
+                action: "transcribe",
+                audioBuffer: Array.from(uint8Array),
+            },
+            (response) => {
+                if (chrome.runtime.lastError) {
+                    console.error("Runtime error:", chrome.runtime.lastError);
+                    retryTranscription(retryCount);
+                } else {
+                    handleTranscription(response);
+                }
+            }
+        );
+    } catch (error) {
+        console.log("Error: Error processing audio:", error);
+        retryTranscription(retryCount);
+    }
+}
+
+function retryTranscription(retryCount) {
+    console.log(`Retrying transcription (attempt ${retryCount + 1} of ${MAX_RETRIES})...`);
+    setTimeout(() => transcribeAudio(retryCount + 1), RETRY_DELAY);
+}
+
+function showRetryMessage(retryCount) {
+    showError(`Error processing audio. Retrying... (${retryCount + 1}/${MAX_RETRIES})`);
 }
 
 function handleTranscription(response) {
