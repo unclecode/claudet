@@ -3,6 +3,8 @@ let isTranscribing = false;
 let audioContext;
 let mediaRecorder;
 let audioChunks = [];
+let clickedMicId = "";
+
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 100; // 1 second
 const WHISPER_SAMPLING_RATE = 16000;
@@ -79,10 +81,11 @@ function insertMicrophoneButton(targetDiv, inline) {
     }
 }
 
-function checkSettingsAndToggleRecording() {
-    chrome.storage.sync.get(['model', 'apiKey'], function(result) {
-        if (result.model === 'groq' && !result.apiKey) {
-            showError("Groq API key not set. Please set it in the extension options.");
+function checkSettingsAndToggleRecording(evt) {
+    const button  = evt.currentTarget;
+    chrome.storage.sync.get(['model', 'groqApiKey', 'openaiApiKey'], function(result) {
+        if ((result.model === 'groq' && !result.groqApiKey) || (result.model === 'openai' && !result.openaiApiKey)) {
+            showError("API key not set. Please set it in the extension options from the Chrome extension menu.");
             return;
         }
 
@@ -91,13 +94,17 @@ function checkSettingsAndToggleRecording() {
                 if (localResult.modelLoadError) {
                     showError("WebGPU model failed to load. Please try again or switch to Groq in the extension options.");
                 } else {
-                    toggleRecording();
+                    toggleRecording(evt, button);
                 }
             });
         } else {
-            toggleRecording();
+            toggleRecording(evt, button);
         }
     });
+
+    evt.preventDefault();
+    evt.stopPropagation();
+    return false;
 }
 
 function showError(message) {
@@ -115,7 +122,7 @@ function showError(message) {
         closeButton.onclick = closeError;
 
         // Disable the mic button
-        const micButton = document.getElementById("mic-button");
+        const micButton = document.getElementById(clickedMicId);
         if (micButton) {
             micButton.disabled = true;
             micButton.style.opacity = "0.5";
@@ -136,15 +143,15 @@ function closeError() {
         infoSpeechDiv.textContent = "";
     }
     // Re-enable the mic button
-    const micButton = document.getElementById("mic-button");
+    const micButton = document.getElementById(clickedMicId);
     if (micButton) {
         micButton.disabled = false;
         micButton.style.opacity = "1";
     }
 }
 
-function toggleRecording(obj) {
-    clickedMicId = obj.currentTarget //.id;
+function toggleRecording(evt, button) {
+    clickedMicId = button; // obj.currentTarget //.id;
     closeError(); // Close any existing error message
     const micButton = clickedMicId // document.getElementById(clickedMicId);
     if (!isRecording && !isTranscribing) {
@@ -160,9 +167,9 @@ function toggleRecording(obj) {
     }
 
     // cancel the event
-    obj.preventDefault();
+    evt.preventDefault();
     // avoid the event to propagate
-    obj.stopPropagation();
+    evt.stopPropagation();
 
     return false;
 }
@@ -212,6 +219,24 @@ function stopRecording() {
 }
 
 
+    // audioBlob
+    //     .arrayBuffer()
+    //     .then((buffer) => {
+    //         // Send the audio buffer to the background script for transcription
+    //         chrome.runtime.sendMessage(
+    //             {
+    //                 action: "transcribe",
+    //                 audioBuffer: Array.from(new Uint8Array(buffer)), // Convert ArrayBuffer to array
+    //                 micId: clickedMicId.id,
+    //             },
+    //             handleTranscription
+    //         );
+    //     })
+    //     .catch((error) => {
+    //         console.error("Error converting blob to array buffer:", error);
+    //         showError("Error processing audio. Please try again.");
+    //         resetRecordingState();
+    //     });
 
 async function transcribeAudio(retryCount = 0) {
     if (retryCount >= MAX_RETRIES) {
@@ -250,6 +275,7 @@ async function transcribeAudio(retryCount = 0) {
             {
                 action: "transcribe",
                 audioBuffer: Array.from(uint8Array),
+                micId: clickedMicId.id,
             },
             (response) => {
                 if (chrome.runtime.lastError) {
@@ -276,16 +302,16 @@ function showRetryMessage(retryCount) {
 }
 
 function handleTranscription(response) {
-    const micId = response.micId;
+    clickedMicId = response.micId;
     
-    const micButton = document.getElementById(micId);
+    const micButton = document.getElementById(clickedMicId);
     isTranscribing = false;
     micButton.disabled = false;
     micButton.style.animation = "";
     micButton.innerHTML = recordIcon;
 
     if (response.success && response.text) {
-        insertTranscribedText(response.text, micId);
+        insertTranscribedText(response.text, clickedMicId);
         initializeExtension();
     } else {
         showError(response.error || "Transcription failed. Please try again.");
@@ -393,11 +419,11 @@ document.head.appendChild(style);
 //     initializeExtension();
 // }
 
-// function initializeExtension() {
-//     insertMicrophoneButton();
-//     console.log("Microphone button inserted");
-//     // Add any other initialization code here
-// }
+function initializeExtension() {
+    // insertMicrophoneButton();
+    // console.log("Microphone button inserted");
+    // // Add any other initialization code here
+}
 
 // Every 100 ms check if mic button is present if not insert it
 setInterval(() => {

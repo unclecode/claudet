@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', function() {
     const modelSelect = document.getElementById('modelSelect');
+    const apiKeyContainer = document.getElementById('api_section');
     const groqApiKeyInput = document.getElementById('groqApiKey');
     const openaiApiKeyInput = document.getElementById('openaiApiKey');
     const saveSettingsButton = document.getElementById('saveSettings');
@@ -24,6 +25,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // Toggle API key input visibility based on selected model
     function toggleApiKeyVisibility() {
         const selectedModel = modelSelect.value;
+        if (selectedModel !== 'groq' && selectedModel !== 'openai') {
+            apiKeyContainer.style.display = 'none';
+            return;
+        }
+        apiKeyContainer.style.display = 'block';
         groqApiKeyContainer.style.display = selectedModel === 'groq' ? 'block' : 'none';
         openaiApiKeyContainer.style.display = selectedModel === 'openai' ? 'block' : 'none';
     }

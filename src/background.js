@@ -189,13 +189,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === "transcribe") {
         (async function () {
             try {
-                if (currentModel === "groq" && !apiKey) {
-                    sendResponse({ success: false, error: "Groq API key not set. Please set it in the extension options." });
+                if ((currentModel === "groq" && !groqApiKey) || (currentModel === "openai" && !openaiApiKey)) {
+                    sendResponse({ success: false, error: "API key not set. Please set it in the extension options." , micId: message.micId || "mic-button"});
                     return;
                 }
-
-                let result;
-
                 // refresh currentModel
                 chrome.storage.sync.get(["model"], async function (result) {
                     if (result.model) {
@@ -228,7 +225,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 });
                 
             } catch (error) {
-                sendResponse({ success: false, error: error.message || "Unknown error" });
+                sendResponse({ success: false, error: error.message || "Unknown error", micId: message.micId || "mic-button" });
             }
         })();
         return true; // Indicates we will send a response asynchronously
