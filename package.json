@@ -1,6 +1,6 @@
 {
     "name": "Claudet",
-    "version": "0.0.1",
+    "version": "0.1.1",
     "description": "Claudet: Claude.ai Voice Input",
     "scripts": {
         "build": "webpack",
